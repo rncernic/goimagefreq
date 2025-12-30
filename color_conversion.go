@@ -1,7 +1,10 @@
 // Color space conversions
 package goimagefreq
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 // BT.709 coefficients (same as sRGB luminance)
 func RGBToYCbCr(r, g, b float32) (y, cb, cr float32) {
@@ -76,4 +79,188 @@ func LabToRGB(L, a, bb float32) (r, g, b float32) {
 
 	rr, gg, bb2 := XYZToRGB(x, y, z)
 	return float32(rr), float32(gg), float32(bb2)
+}
+
+// func RGBToLabImage(
+// 	r, g, b [][]float32,
+// ) (L, a, b2 [][]float32) {
+
+// 	h := len(r)
+// 	w := len(r[0])
+
+// 	L = make([][]float32, h)
+// 	a = make([][]float32, h)
+// 	b2 = make([][]float32, h)
+
+// 	for y := 0; y < h; y++ {
+// 		L[y] = make([]float32, w)
+// 		a[y] = make([]float32, w)
+// 		b2[y] = make([]float32, w)
+
+// 		for x := 0; x < w; x++ {
+// 			L[y][x], a[y][x], b2[y][x] =
+// 				RGBToLab(r[y][x], g[y][x], b[y][x])
+// 		}
+// 	}
+// 	return
+// }
+
+// func LabToRGBImage(
+// 	L, a, b2 [][]float32,
+// ) (r, g, b [][]float32) {
+
+// 	h := len(L)
+// 	w := len(L[0])
+
+// 	r = make([][]float32, h)
+// 	g = make([][]float32, h)
+// 	b = make([][]float32, h)
+
+// 	for y := 0; y < h; y++ {
+// 		r[y] = make([]float32, w)
+// 		g[y] = make([]float32, w)
+// 		b[y] = make([]float32, w)
+
+// 		for x := 0; x < w; x++ {
+// 			r[y][x], g[y][x], b[y][x] =
+// 				LabToRGB(L[y][x], a[y][x], b2[y][x])
+// 		}
+// 	}
+// 	return
+// }
+
+func RGBToLabImage(
+	r, g, b [][]float32,
+) (L, a, b2 [][]float32) {
+
+	h := len(r)
+	w := len(r[0])
+
+	L = make([][]float32, h)
+	a = make([][]float32, h)
+	b2 = make([][]float32, h)
+
+	var wg sync.WaitGroup
+	wg.Add(h)
+
+	for y := 0; y < h; y++ {
+		y := y
+		go func() {
+			defer wg.Done()
+
+			L[y] = make([]float32, w)
+			a[y] = make([]float32, w)
+			b2[y] = make([]float32, w)
+
+			for x := 0; x < w; x++ {
+				L[y][x], a[y][x], b2[y][x] =
+					RGBToLab(r[y][x], g[y][x], b[y][x])
+			}
+		}()
+	}
+
+	wg.Wait()
+	return
+}
+
+func LabToRGBImage(
+	L, a, b2 [][]float32,
+) (r, g, b [][]float32) {
+
+	h := len(L)
+	w := len(L[0])
+
+	r = make([][]float32, h)
+	g = make([][]float32, h)
+	b = make([][]float32, h)
+
+	var wg sync.WaitGroup
+	wg.Add(h)
+
+	for y := 0; y < h; y++ {
+		y := y
+		go func() {
+			defer wg.Done()
+
+			r[y] = make([]float32, w)
+			g[y] = make([]float32, w)
+			b[y] = make([]float32, w)
+
+			for x := 0; x < w; x++ {
+				r[y][x], g[y][x], b[y][x] =
+					LabToRGB(L[y][x], a[y][x], b2[y][x])
+			}
+		}()
+	}
+
+	wg.Wait()
+	return
+}
+
+func RGBToYCbCrImage(
+	r, g, b [][]float32,
+) (y, cb, cr [][]float32) {
+
+	h := len(r)
+	w := len(r[0])
+
+	y = make([][]float32, h)
+	cb = make([][]float32, h)
+	cr = make([][]float32, h)
+
+	var wg sync.WaitGroup
+	wg.Add(h)
+
+	for i := 0; i < h; i++ {
+		i := i
+		go func() {
+			defer wg.Done()
+
+			y[i] = make([]float32, w)
+			cb[i] = make([]float32, w)
+			cr[i] = make([]float32, w)
+
+			for x := 0; x < w; x++ {
+				y[i][x], cb[i][x], cr[i][x] =
+					RGBToYCbCr(r[i][x], g[i][x], b[i][x])
+			}
+		}()
+	}
+
+	wg.Wait()
+	return
+}
+
+func YCbCrToRGBImage(
+	y, cb, cr [][]float32,
+) (r, g, b [][]float32) {
+
+	h := len(y)
+	w := len(y[0])
+
+	r = make([][]float32, h)
+	g = make([][]float32, h)
+	b = make([][]float32, h)
+
+	var wg sync.WaitGroup
+	wg.Add(h)
+
+	for i := 0; i < h; i++ {
+		i := i
+		go func() {
+			defer wg.Done()
+
+			r[i] = make([]float32, w)
+			g[i] = make([]float32, w)
+			b[i] = make([]float32, w)
+
+			for x := 0; x < w; x++ {
+				r[i][x], g[i][x], b[i][x] =
+					YCbCrToRGB(y[i][x], cb[i][x], cr[i][x])
+			}
+		}()
+	}
+
+	wg.Wait()
+	return
 }

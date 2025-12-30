@@ -22,8 +22,8 @@ func MAD(img [][]float32) float64 {
 }
 
 // Soft-threshold shrinkage
-func softThreshold(v, t float64) float32 {
-	if math.Abs(v) <= t {
+func softThreshold(v, t float32) float32 {
+	if math.Abs(float64(v)) <= float64(t) {
 		return 0
 	}
 	if v > 0 {
@@ -33,17 +33,17 @@ func softThreshold(v, t float64) float32 {
 }
 
 // AtrousWaveletDenoiseL applies wavelet denoising to luminance only.
-func AtrousWaveletDenoiseL(L [][]float32, levels int, strength []float64) [][]float32 {
+func AtrousWaveletDenoiseL(L [][]float32, levels int, strength []float32) [][]float32 {
 	details, residual := AtrousWavelet(L, levels)
 
 	for i := 0; i < levels; i++ {
 		sigma := MAD(details[i]) / 0.6745
-		thr := strength[i] * sigma
+		thr := strength[i] * float32(sigma)
 
 		for y := range details[i] {
 			for x := range details[i][y] {
 				details[i][y][x] =
-					softThreshold(float64(details[i][y][x]), thr)
+					softThreshold(details[i][y][x], thr)
 			}
 		}
 	}
@@ -94,4 +94,40 @@ func partition(a []float64, lo, hi int) int {
 		i++
 		j--
 	}
+}
+
+func WaveletDenoiseMLT(
+	L [][]float32,
+	sigma []float32,
+) [][]float32 {
+
+	levels := len(sigma)
+
+	// À trous decomposition
+	details, residual := AtrousWavelet(L, levels)
+
+	// Threshold each detail layer
+	for i := 0; i < len(details); i++ {
+		t := sigma[min(i, len(sigma)-1)]
+
+		if t <= 0 {
+			continue
+		}
+
+		for y := range details[i] {
+			for x := range details[i][y] {
+				details[i][y][x] = softThreshold(details[i][y][x], t)
+			}
+		}
+	}
+
+	// Reconstruct
+	return AtrousReconstruct(details, residual)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
