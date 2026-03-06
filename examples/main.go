@@ -9,8 +9,7 @@ import (
 )
 
 func main() {
-	// f, _ := os.Open("images/baboon.png")
-	f, _ := os.Open("images/t1.png")
+	f, _ := os.Open("images/baboon.png")
 
 	img, _ := png.Decode(f)
 
